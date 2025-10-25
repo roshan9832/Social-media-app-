@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from 'react';
-import { Post, Story as StoryType, User, Comment as CommentType } from '../types';
+import { Post, Story as StoryType, User, Comment as CommentType, Screen } from '../types';
 import { USERS, STORIES, CURRENT_USER_ID } from '../constants';
-import { LikeIcon, CommentIcon, ShareIcon, MoreIcon, MessagesIcon } from '../components/Icons';
+import { LikeIcon, CommentIcon, ShareIcon, MoreIcon, MessagesIcon, BookmarkIcon, NotificationIcon, PlayIcon, PauseIcon, VolumeOffIcon, VolumeUpIcon } from '../components/Icons';
 
 type StoryProps = {
   story: StoryType;
@@ -147,10 +147,13 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onProfileClick, onRe
 type PostCardProps = {
   post: Post;
   onProfileClick: (userId: string) => void;
+  isBookmarked: boolean;
+  onToggleBookmark: (postId: string) => void;
 };
-const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick, isBookmarked, onToggleBookmark }) => {
   const user = USERS.find(u => u.id === post.userId);
   const [isLiked, setIsLiked] = useState(false);
+  const [animateLike, setAnimateLike] = useState(false);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -159,12 +162,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick }) => {
   const [newComment, setNewComment] = useState('');
   const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
   const currentUser = USERS.find(u => u.id === CURRENT_USER_ID);
+  const [animateBookmark, setAnimateBookmark] = useState(false);
 
   if (!user) return null;
+
+  const handleLikeClick = () => {
+    if (!isLiked) {
+      setAnimateLike(true);
+      setTimeout(() => setAnimateLike(false), 300);
+    }
+    setIsLiked(!isLiked);
+  };
 
   const handleDoubleClick = () => {
     if (!isLiked) {
       setIsLiked(true);
+      setAnimateLike(true);
+      setTimeout(() => setAnimateLike(false), 300);
     }
     setShowLikeAnimation(true);
     setTimeout(() => {
@@ -221,6 +235,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick }) => {
     }
   };
 
+  const handleBookmarkClick = () => {
+    onToggleBookmark(post.id);
+    setAnimateBookmark(true);
+    setTimeout(() => setAnimateBookmark(false), 200);
+  };
+
   return (
     <div className="bg-dumm-gray-100 rounded-lg mb-4">
       <div className="flex items-center p-3">
@@ -257,20 +277,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick }) => {
               poster={post.imageUrl}
               onClick={handleVideoClick}
             />
-            {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
-                <svg className="w-16 h-16 text-white/70 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-            <button onClick={() => setIsMuted(!isMuted)} className="absolute bottom-4 right-4 bg-black/50 p-2 rounded-full z-10">
-              {isMuted ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.108 12 5v14c0 .892-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.108 12 5v14c0 .892-1.077 1.337-1.707.707L5.586 15z" /></svg>
-              )}
-            </button>
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10">
+              <button onClick={handleVideoClick} className="bg-black/50 p-2 rounded-full">
+                {isPlaying ? <PauseIcon className="h-5 w-5 text-white" /> : <PlayIcon className="h-5 w-5 text-white" />}
+              </button>
+              <button onClick={() => setIsMuted(!isMuted)} className="bg-black/50 p-2 rounded-full">
+                {isMuted ? (
+                  <VolumeOffIcon className="h-5 w-5 text-white" />
+                ) : (
+                  <VolumeUpIcon className="h-5 w-5 text-white" />
+                )}
+              </button>
+            </div>
           </>
         ) : (
           <img 
@@ -286,19 +304,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick }) => {
         )}
       </div>
       <div className="p-3">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-1">
-            <LikeIcon 
-              className={`w-7 h-7 cursor-pointer transition-transform duration-200 ease-in-out active:scale-125 ${isLiked ? 'text-dumm-pink fill-current' : 'text-dumm-text-light'}`} 
-              onClick={() => setIsLiked(!isLiked)} 
-            />
-            <span className="text-dumm-text-light">{isLiked ? post.likes + 1 : post.likes}</span>
+        <div className="flex items-center">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1">
+              <LikeIcon 
+                className={`w-7 h-7 cursor-pointer ${isLiked ? 'text-dumm-pink fill-current' : 'text-dumm-text-light'} ${animateLike ? 'animate-like-button-animation' : ''}`} 
+                onClick={handleLikeClick} 
+              />
+              <span className="text-dumm-text-light">{isLiked ? post.likes + 1 : post.likes}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <CommentIcon className="w-7 h-7 text-dumm-text-light" />
+              <span className="text-dumm-text-light">{comments.length}</span>
+            </div>
+            <ShareIcon className="w-7 h-7 text-dumm-text-light" />
           </div>
-          <div className="flex items-center space-x-1">
-            <CommentIcon className="w-7 h-7 text-dumm-text-light" />
-            <span className="text-dumm-text-light">{comments.length}</span>
-          </div>
-          <ShareIcon className="w-7 h-7 text-dumm-text-light" />
+          <div className="flex-1" />
+          <BookmarkIcon 
+            onClick={handleBookmarkClick}
+            className={`w-7 h-7 cursor-pointer ${isBookmarked ? 'text-dumm-text-light fill-current' : 'text-dumm-text-light'} ${animateBookmark ? 'animate-button-pop' : ''}`}
+          />
         </div>
         <div className="mt-2 text-dumm-text-light text-sm">
           <span className="font-bold cursor-pointer" onClick={() => onProfileClick(user.id)}>{user.username}</span>
@@ -352,16 +377,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick }) => {
 interface FeedScreenProps {
   posts: Post[];
   onProfileClick: (userId: string) => void;
+  bookmarkedPostIds: string[];
+  onToggleBookmark: (postId: string) => void;
+  navigate: (screen: Screen) => void;
 }
 
-const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick }) => {
+const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick, bookmarkedPostIds, onToggleBookmark, navigate }) => {
   return (
     <div className="text-white">
       <header className="p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold italic">Dumm</h1>
         <div className="flex items-center space-x-4">
-          <LikeIcon className="w-7 h-7" />
-          <MessagesIcon className="w-7 h-7" />
+          <button onClick={() => navigate(Screen.Notifications)}>
+            <NotificationIcon className="w-7 h-7 text-dumm-text-light" />
+          </button>
+          <button onClick={() => navigate(Screen.Messages)}>
+            <MessagesIcon className="w-7 h-7 text-dumm-text-light" />
+          </button>
         </div>
       </header>
 
@@ -375,7 +407,13 @@ const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick }) => {
       
       <main className="p-4">
         {posts.map(post => (
-          <PostCard key={post.id} post={post} onProfileClick={onProfileClick} />
+          <PostCard 
+            key={post.id} 
+            post={post} 
+            onProfileClick={onProfileClick}
+            isBookmarked={bookmarkedPostIds.includes(post.id)}
+            onToggleBookmark={onToggleBookmark}
+          />
         ))}
       </main>
     </div>

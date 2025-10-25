@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Post } from '../types';
 import { USERS, CURRENT_USER_ID } from '../constants';
-import { BackIcon, MoreIcon, GridIcon, VideoIcon } from '../components/Icons';
+import { BackIcon, MoreIcon, GridIcon, VideoIcon, BookmarkIcon } from '../components/Icons';
 
 interface ProfileScreenProps {
   userId: string;
@@ -10,11 +10,13 @@ interface ProfileScreenProps {
   onBack: () => void;
   onEditProfileClick: () => void;
   onSettingsClick: () => void;
+  bookmarkedPostIds: string[];
 }
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ userId, posts, onBack, onEditProfileClick, onSettingsClick }) => {
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ userId, posts, onBack, onEditProfileClick, onSettingsClick, bookmarkedPostIds }) => {
   const user = USERS.find(u => u.id === userId);
   const userPosts = posts.filter(p => p.userId === userId);
+  const [activeTab, setActiveTab] = useState<'grid' | 'videos' | 'saved'>('grid');
 
   if (!user) {
     return (
@@ -26,6 +28,39 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ userId, posts, onBack, on
   }
 
   const isCurrentUser = userId === CURRENT_USER_ID;
+  const bookmarkedPosts = posts.filter(post => bookmarkedPostIds.includes(post.id));
+
+  const renderPosts = () => {
+    let postsToRender: Post[] = [];
+    switch (activeTab) {
+      case 'grid':
+        postsToRender = userPosts;
+        break;
+      case 'videos':
+        postsToRender = userPosts.filter(p => p.videoUrl);
+        break;
+      case 'saved':
+        postsToRender = isCurrentUser ? bookmarkedPosts : [];
+        break;
+      default:
+        postsToRender = userPosts;
+    }
+
+    return postsToRender.map(post => (
+      <div key={post.id} className="aspect-square relative">
+        <img src={post.imageUrl} alt="post" className="w-full h-full object-cover" />
+        {post.videoUrl && (
+          <div className="absolute top-2 right-2">
+              <VideoIcon className="w-5 h-5 text-white drop-shadow-lg" />
+          </div>
+        )}
+        {post.isLive && (
+          <div className="absolute top-2 left-2 bg-dumm-pink text-white text-xs font-bold px-2 py-1 rounded-md">LIVE</div>
+        )}
+      </div>
+    ));
+  };
+
 
   return (
     <div className="text-dumm-text-light">
@@ -77,30 +112,23 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ userId, posts, onBack, on
         {/* Stories would go here if implemented */}
 
         <div className="mt-6 border-t border-dumm-gray-300">
-            <div className="flex justify-around py-2">
-                <button className="p-2 border-t-2 border-white">
-                    <GridIcon className="w-6 h-6 text-white"/>
+            <div className="flex justify-around">
+                <button onClick={() => setActiveTab('grid')} className={`flex-1 p-2 ${activeTab === 'grid' ? 'border-t-2 border-white' : ''}`}>
+                    <GridIcon className={`w-6 h-6 mx-auto ${activeTab === 'grid' ? 'text-white' : 'text-dumm-text-dark'}`}/>
                 </button>
-                <button className="p-2">
-                    <VideoIcon className="w-6 h-6 text-dumm-text-dark"/>
+                <button onClick={() => setActiveTab('videos')} className={`flex-1 p-2 ${activeTab === 'videos' ? 'border-t-2 border-white' : ''}`}>
+                    <VideoIcon className={`w-6 h-6 mx-auto ${activeTab === 'videos' ? 'text-white' : 'text-dumm-text-dark'}`}/>
                 </button>
+                 {isCurrentUser && (
+                  <button onClick={() => setActiveTab('saved')} className={`flex-1 p-2 ${activeTab === 'saved' ? 'border-t-2 border-white' : ''}`}>
+                    <BookmarkIcon className={`w-6 h-6 mx-auto ${activeTab === 'saved' ? 'text-white' : 'text-dumm-text-dark'}`} />
+                  </button>
+                )}
             </div>
         </div>
 
         <div className="grid grid-cols-3 gap-1">
-          {userPosts.map(post => (
-            <div key={post.id} className="aspect-square relative">
-              <img src={post.imageUrl} alt="post" className="w-full h-full object-cover" />
-              {post.videoUrl && (
-                <div className="absolute top-2 right-2">
-                    <VideoIcon className="w-5 h-5 text-white drop-shadow-lg" />
-                </div>
-              )}
-              {post.isLive && (
-                <div className="absolute top-2 left-2 bg-dumm-pink text-white text-xs font-bold px-2 py-1 rounded-md">LIVE</div>
-              )}
-            </div>
-          ))}
+          {renderPosts()}
         </div>
 
       </main>

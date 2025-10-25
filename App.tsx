@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Screen, User, Post } from './types';
 import FeedScreen from './screens/FeedScreen';
@@ -12,57 +11,56 @@ import SignUpScreen from './screens/SignUpScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import ReelsScreen from './screens/ReelsScreen';
 import UploadScreen from './screens/UploadScreen';
-import { HomeIcon, ReelsIcon, AddIcon, MessagesIcon, NotificationIcon } from './components/Icons';
+import DiscoverScreen from './screens/DiscoverScreen';
+import { HomeIcon, ReelsIcon, AddIcon, DiscoverIcon } from './components/Icons';
 import { CURRENT_USER_ID, USERS, POSTS as initialPosts } from './constants';
 
 const BottomNavBar: React.FC<{ activeScreen: Screen, navigate: (screen: Screen) => void, onProfileClick: () => void, onAddClick: () => void }> = ({ activeScreen, navigate, onProfileClick, onAddClick }) => {
-    const navItems = [
-      { screen: Screen.Feed, icon: HomeIcon, label: 'Feed' },
-      { screen: Screen.Reels, icon: ReelsIcon, label: 'Reels' },
-      { screen: 'Add', icon: AddIcon, label: 'Add' },
-      { screen: Screen.Messages, icon: MessagesIcon, label: 'Messages' },
-      { screen: Screen.Notifications, icon: NotificationIcon, label: 'Notifications' },
-    ];
-  
     return (
       <nav className="fixed bottom-0 left-0 right-0 bg-dumm-gray-100 border-t border-dumm-gray-300 max-w-sm mx-auto">
         <div className="flex justify-around items-center h-16">
-          {navItems.map((item) => {
-            const isActive = item.screen === activeScreen;
-            if (item.label === 'Add') {
-                return (
-                    <button key={item.label} onClick={onAddClick} className="p-2 bg-dumm-pink rounded-full -translate-y-4 shadow-lg shadow-dumm-pink/30">
-                        <item.icon className="w-8 h-8 text-white" />
-                    </button>
-                )
-            }
-            return (
-              <button key={item.label} onClick={() => navigate(item.screen as Screen)} className="flex flex-col items-center">
-                <item.icon className={`w-7 h-7 ${isActive ? 'text-dumm-pink' : 'text-dumm-text-dark'}`} />
-              </button>
-            );
-          })}
-          <button onClick={onProfileClick} className="flex flex-col items-center">
-            <img src="https://picsum.photos/id/237/200" alt="Profile" className={`w-7 h-7 rounded-full border-2 ${activeScreen === Screen.Profile ? 'border-dumm-pink' : 'border-transparent'}`} />
-          </button>
+            <button onClick={() => navigate(Screen.Feed)} className="flex flex-col items-center">
+                <HomeIcon className={`w-7 h-7 ${activeScreen === Screen.Feed ? 'text-dumm-pink' : 'text-dumm-text-dark'}`} />
+            </button>
+            <button onClick={() => navigate(Screen.Discover)} className="flex flex-col items-center">
+                <DiscoverIcon className={`w-7 h-7 ${activeScreen === Screen.Discover ? 'text-dumm-pink' : 'text-dumm-text-dark'}`} />
+            </button>
+            <button onClick={onAddClick} className="p-2 bg-dumm-pink rounded-full -translate-y-4 shadow-lg shadow-dumm-pink/30">
+                <AddIcon className="w-8 h-8 text-white" />
+            </button>
+            <button onClick={() => navigate(Screen.Reels)} className="flex flex-col items-center">
+                <ReelsIcon className={`w-7 h-7 ${activeScreen === Screen.Reels ? 'text-dumm-pink' : 'text-dumm-text-dark'}`} />
+            </button>
+            <button onClick={onProfileClick} className="flex flex-col items-center">
+                <img src="https://picsum.photos/id/237/200" alt="Profile" className={`w-7 h-7 rounded-full border-2 ${activeScreen === Screen.Profile ? 'border-dumm-pink' : 'border-transparent'}`} />
+            </button>
         </div>
       </nav>
     );
-  };
+};
   
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for dev
   const [isLoginView, setIsLoginView] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.Feed);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<string[]>(['p2']);
 
   const navigate = (screen: Screen) => {
     setCurrentScreen(screen);
     if (screen !== Screen.Profile && screen !== Screen.EditProfile && screen !== Screen.Settings) setActiveProfileId(null);
     if (screen !== Screen.Chat) setActiveConversationId(null);
+  };
+
+  const handleToggleBookmark = (postId: string) => {
+    setBookmarkedPostIds(prev =>
+        prev.includes(postId)
+            ? prev.filter(id => id !== postId)
+            : [...prev, postId]
+    );
   };
 
   const handleLogin = () => setIsAuthenticated(true);
@@ -121,7 +119,7 @@ const App: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (currentScreen === Screen.Profile || currentScreen === Screen.Messages || currentScreen === Screen.Notifications || currentScreen === Screen.Reels || currentScreen === Screen.Upload) {
+    if (currentScreen === Screen.Profile || currentScreen === Screen.Messages || currentScreen === Screen.Notifications || currentScreen === Screen.Reels || currentScreen === Screen.Upload || currentScreen === Screen.Discover) {
         setCurrentScreen(Screen.Feed);
         setActiveProfileId(null);
     } else if (currentScreen === Screen.Chat) {
@@ -148,9 +146,9 @@ const App: React.FC = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case Screen.Feed:
-        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} />;
+        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} />;
       case Screen.Profile:
-        return <ProfileScreen userId={activeProfileId || CURRENT_USER_ID} posts={posts} onBack={handleBack} onEditProfileClick={handleEditProfileClick} onSettingsClick={handleSettingsClick} />;
+        return <ProfileScreen userId={activeProfileId || CURRENT_USER_ID} posts={posts} onBack={handleBack} onEditProfileClick={handleEditProfileClick} onSettingsClick={handleSettingsClick} bookmarkedPostIds={bookmarkedPostIds} />;
       case Screen.Messages:
         return <MessagesScreen onBack={handleBack} onChatClick={handleChatClick} />;
       case Screen.Chat:
@@ -166,13 +164,13 @@ const App: React.FC = () => {
       case Screen.Upload:
         return <UploadScreen onBack={handleBack} onShare={handleSharePost} />;
       case Screen.Discover:
-        return <div className="p-4 text-white">Discover Screen</div>;
+        return <DiscoverScreen posts={posts} />;
       default:
-        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} />;
+        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} />;
     }
   };
   
-  const showNavBar = currentScreen !== Screen.Reels && currentScreen !== Screen.Upload;
+  const showNavBar = ![Screen.Reels, Screen.Upload, Screen.Chat, Screen.Login, Screen.SignUp, Screen.Messages, Screen.Notifications, Screen.EditProfile, Screen.Settings].includes(currentScreen);
 
   return (
     <div className="bg-dumm-dark min-h-screen font-sans max-w-sm mx-auto shadow-2xl shadow-dumm-pink/20">
