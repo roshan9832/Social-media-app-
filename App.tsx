@@ -97,11 +97,12 @@ const App: React.FC = () => {
     setCurrentScreen(Screen.Settings);
   };
   
-  const handleSharePost = (caption: string, imageUrl: string) => {
+  const handleSharePost = (caption: string, imageUrl: string, videoUrl?: string) => {
     const newPost: Post = {
         id: `p${Date.now()}`,
         userId: CURRENT_USER_ID,
         imageUrl: imageUrl,
+        videoUrl: videoUrl,
         caption: caption,
         likes: 0,
         comments: [],

@@ -15,6 +15,7 @@ export interface Post {
   id: string;
   userId: string;
   imageUrl: string;
+  videoUrl?: string;
   caption: string;
   likes: number;
   comments: Comment[];
@@ -26,6 +27,7 @@ export interface Comment {
   id:string;
   userId: string;
   text: string;
+  replies?: Comment[];
 }
 
 export interface Story {

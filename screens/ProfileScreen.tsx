@@ -91,6 +91,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ userId, posts, onBack, on
           {userPosts.map(post => (
             <div key={post.id} className="aspect-square relative">
               <img src={post.imageUrl} alt="post" className="w-full h-full object-cover" />
+              {post.videoUrl && (
+                <div className="absolute top-2 right-2">
+                    <VideoIcon className="w-5 h-5 text-white drop-shadow-lg" />
+                </div>
+              )}
               {post.isLive && (
                 <div className="absolute top-2 left-2 bg-dumm-pink text-white text-xs font-bold px-2 py-1 rounded-md">LIVE</div>
               )}
