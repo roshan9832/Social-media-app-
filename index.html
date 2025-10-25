@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dumm Social Media App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'dumm-pink': '#F72585',
+              'dumm-blue': '#4CC9F0',
+              'dumm-dark': '#121212',
+              'dumm-gray-100': '#1E1E1E',
+              'dumm-gray-200': '#2C2C2C',
+              'dumm-gray-300': '#3A3A3A',
+              'dumm-text-light': '#E0E0E0',
+              'dumm-text-dark': '#A0A0A0',
+            },
+            animation: {
+              'spin-slow': 'spin 3s linear infinite',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-dumm-dark">
+    <div id="root"></div>
+  </body>
+</html>
