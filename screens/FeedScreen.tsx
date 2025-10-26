@@ -1,21 +1,25 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Post, Story as StoryType, User, Comment as CommentType, Screen } from '../types';
 import { USERS, STORIES, CURRENT_USER_ID } from '../constants';
-import { LikeIcon, CommentIcon, ShareIcon, MoreIcon, MessagesIcon, BookmarkIcon, NotificationIcon, PlayIcon, PauseIcon, VolumeOffIcon, VolumeUpIcon } from '../components/Icons';
+import { LikeIcon, CommentIcon, ShareIcon, MoreIcon, MessagesIcon, BookmarkIcon, NotificationIcon, PlayIcon, PauseIcon, VolumeOffIcon, VolumeUpIcon, PlayCircleIcon, EyeIcon } from '../components/Icons';
 
 type StoryProps = {
   story: StoryType;
+  isUserLive: boolean;
 };
-const Story: React.FC<StoryProps> = ({ story }) => {
+const Story: React.FC<StoryProps> = ({ story, isUserLive }) => {
   const user = USERS.find(u => u.id === story.userId);
   if (!user) return null;
   return (
     <div className="flex-shrink-0 text-center w-20">
-      <div className="relative p-0.5 border-2 border-dumm-pink rounded-full">
-        <img className="w-16 h-16 rounded-full object-cover" src={user.avatarUrl} alt={user.name} />
+      <div className={`relative p-0.5 border-2 ${isUserLive ? 'bg-gradient-to-tr from-dumm-pink to-yellow-400 border-transparent' : 'border-dumm-pink'} rounded-full`}>
+        <img className="w-16 h-16 rounded-full object-cover border-2 border-dumm-dark" src={user.avatarUrl} alt={user.name} />
+         {isUserLive && (
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-dumm-pink text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md border-2 border-dumm-dark uppercase">LIVE</div>
+        )}
       </div>
-      <p className="text-xs text-dumm-text-light mt-1 truncate">{user.name}</p>
+      <p className="text-xs text-dumm-text-light mt-2 truncate">{user.name}</p>
     </div>
   );
 };
@@ -149,8 +153,9 @@ type PostCardProps = {
   onProfileClick: (userId: string) => void;
   isBookmarked: boolean;
   onToggleBookmark: (postId: string) => void;
+  onLiveStreamClick: (postId: string) => void;
 };
-const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick, isBookmarked, onToggleBookmark }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick, isBookmarked, onToggleBookmark, onLiveStreamClick }) => {
   const user = USERS.find(u => u.id === post.userId);
   const [isLiked, setIsLiked] = useState(false);
   const [animateLike, setAnimateLike] = useState(false);
@@ -259,13 +264,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick, isBookmarked,
           </p>
           <p className="text-xs text-dumm-text-dark">{post.timestamp}</p>
         </div>
-        {post.isLive && (
-          <div className="bg-dumm-pink text-white text-xs font-bold px-2 py-1 rounded-md">LIVE</div>
-        )}
         <MoreIcon className="w-6 h-6 text-dumm-text-dark ml-2" />
       </div>
-      <div className="relative" onDoubleClick={handleDoubleClick}>
-         {post.videoUrl ? (
+       <div className="relative" onDoubleClick={!post.isLive ? handleDoubleClick : undefined} onClick={post.isLive ? () => onLiveStreamClick(post.id) : undefined}>
+         {post.isLive ? (
+          <div className="cursor-pointer">
+            <img 
+              className="w-full h-auto object-cover" 
+              src={post.imageUrl} 
+              alt="Live Stream Thumbnail" 
+            />
+            <div className="absolute top-4 left-4 bg-dumm-pink text-white text-xs font-bold px-2 py-1 rounded-md uppercase">LIVE</div>
+            <div className="absolute top-4 right-4 bg-black/50 text-white text-sm font-semibold px-3 py-1 rounded-md flex items-center">
+              <EyeIcon className="w-4 h-4 mr-1.5" />
+              {post.viewerCount?.toLocaleString()}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <PlayCircleIcon className="w-20 h-20 text-white/70" />
+            </div>
+          </div>
+        ) : post.videoUrl ? (
           <>
             <video
               ref={videoRef}
@@ -380,9 +398,71 @@ interface FeedScreenProps {
   bookmarkedPostIds: string[];
   onToggleBookmark: (postId: string) => void;
   navigate: (screen: Screen) => void;
+  onLiveStreamClick: (postId: string) => void;
 }
 
-const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick, bookmarkedPostIds, onToggleBookmark, navigate }) => {
+const POSTS_PER_PAGE = 3;
+
+const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick, bookmarkedPostIds, onToggleBookmark, navigate, onLiveStreamClick }) => {
+  const livePostUserIds = posts.filter(p => p.isLive).map(p => p.userId);
+  
+  const [page, setPage] = useState(1);
+  const [visiblePosts, setVisiblePosts] = useState<Post[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const loaderRef = useRef(null);
+
+  // Load initial posts
+  useEffect(() => {
+    const initialPosts = posts.slice(0, POSTS_PER_PAGE);
+    setVisiblePosts(initialPosts);
+    setHasMore(posts.length > POSTS_PER_PAGE);
+  }, [posts]);
+
+  // Load more posts when page changes, appending them to the list
+  useEffect(() => {
+    if (page === 1) return; // Initial posts are already loaded
+
+    const fetchMorePosts = () => {
+      const startIndex = (page - 1) * POSTS_PER_PAGE;
+      const endIndex = startIndex + POSTS_PER_PAGE;
+      const newPosts = posts.slice(startIndex, endIndex);
+
+      if (newPosts.length > 0) {
+        // Append new posts instead of re-calculating the whole list
+        setVisiblePosts(prevPosts => [...prevPosts, ...newPosts]);
+      }
+      
+      if (endIndex >= posts.length) {
+        setHasMore(false);
+      }
+    };
+
+    fetchMorePosts();
+  }, [page, posts]);
+
+  // IntersectionObserver to trigger loading more posts
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPage((prevPage) => prevPage + 1);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [hasMore]);
+
   return (
     <div className="text-white">
       <header className="p-4 flex justify-between items-center">
@@ -400,21 +480,27 @@ const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick, bookmark
       <div className="px-4 pb-2 border-b border-dumm-gray-300">
         <div className="flex space-x-4 overflow-x-auto pb-2 -mx-4 px-4">
           {STORIES.map(story => (
-            <Story key={story.id} story={story} />
+            <Story key={story.id} story={story} isUserLive={livePostUserIds.includes(story.userId)} />
           ))}
         </div>
       </div>
       
       <main className="p-4">
-        {posts.map(post => (
+        {visiblePosts.map(post => (
           <PostCard 
             key={post.id} 
             post={post} 
             onProfileClick={onProfileClick}
             isBookmarked={bookmarkedPostIds.includes(post.id)}
             onToggleBookmark={onToggleBookmark}
+            onLiveStreamClick={onLiveStreamClick}
           />
         ))}
+        {hasMore && (
+          <div ref={loaderRef} className="flex justify-center items-center p-4">
+            <div className="w-8 h-8 border-t-2 border-dumm-pink rounded-full animate-spin"></div>
+          </div>
+        )}
       </main>
     </div>
   );

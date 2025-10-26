@@ -11,6 +11,12 @@ export interface User {
   hasStory: boolean;
 }
 
+export interface LiveComment {
+  id: string;
+  userId: string;
+  text: string;
+}
+
 export interface Post {
   id: string;
   userId: string;
@@ -21,6 +27,8 @@ export interface Post {
   comments: Comment[];
   timestamp: string;
   isLive?: boolean;
+  viewerCount?: number;
+  liveComments?: LiveComment[];
 }
 
 export interface Comment {
@@ -84,4 +92,6 @@ export enum Screen {
   Settings,
   Reels,
   Upload,
+  LiveStream,
+  GoLive,
 }

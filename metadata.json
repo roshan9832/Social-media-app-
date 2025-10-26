@@ -1,5 +1,8 @@
 {
   "name": "Dumm Social Media App",
   "description": "A fully functional social media application clone based on the 'Dumm UI Kit', featuring a sleek dark mode interface. It includes core social features like a content feed, user profiles, direct messaging, stories, and notifications.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
 }

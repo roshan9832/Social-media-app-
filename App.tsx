@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Screen, User, Post } from './types';
 import FeedScreen from './screens/FeedScreen';
@@ -12,7 +13,9 @@ import SettingsScreen from './screens/SettingsScreen';
 import ReelsScreen from './screens/ReelsScreen';
 import UploadScreen from './screens/UploadScreen';
 import DiscoverScreen from './screens/DiscoverScreen';
-import { HomeIcon, ReelsIcon, AddIcon, DiscoverIcon } from './components/Icons';
+import GoLiveScreen from './screens/GoLiveScreen';
+import LiveStreamScreen from './screens/LiveStreamScreen';
+import { HomeIcon, ReelsIcon, AddIcon, DiscoverIcon, PlayCircleIcon } from './components/Icons';
 import { CURRENT_USER_ID, USERS, POSTS as initialPosts } from './constants';
 
 const BottomNavBar: React.FC<{ activeScreen: Screen, navigate: (screen: Screen) => void, onProfileClick: () => void, onAddClick: () => void }> = ({ activeScreen, navigate, onProfileClick, onAddClick }) => {
@@ -48,11 +51,14 @@ const App: React.FC = () => {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [bookmarkedPostIds, setBookmarkedPostIds] = useState<string[]>(['p2']);
+  const [activeLiveStreamPostId, setActiveLiveStreamPostId] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const navigate = (screen: Screen) => {
     setCurrentScreen(screen);
     if (screen !== Screen.Profile && screen !== Screen.EditProfile && screen !== Screen.Settings) setActiveProfileId(null);
     if (screen !== Screen.Chat) setActiveConversationId(null);
+    if (screen !== Screen.LiveStream) setActiveLiveStreamPostId(null);
   };
 
   const handleToggleBookmark = (postId: string) => {
@@ -88,7 +94,7 @@ const App: React.FC = () => {
   };
   
   const handleAddClick = () => {
-    setCurrentScreen(Screen.Upload);
+    setIsAddModalOpen(true);
   };
 
   const handleSettingsClick = () => {
@@ -118,6 +124,31 @@ const App: React.FC = () => {
     setCurrentScreen(Screen.Profile);
   };
 
+  const handleLiveStreamClick = (postId: string) => {
+    setActiveLiveStreamPostId(postId);
+    setCurrentScreen(Screen.LiveStream);
+  };
+
+  const handleGoLive = (caption: string) => {
+    const newLivePost: Post = {
+      id: `p${Date.now()}`,
+      userId: CURRENT_USER_ID,
+      imageUrl: `https://picsum.photos/seed/${Date.now()}/600/800`, // random thumbnail
+      videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', // placeholder stream
+      caption: caption,
+      likes: 0,
+      comments: [],
+      timestamp: 'Just now',
+      isLive: true,
+      viewerCount: 1, // The streamer themselves
+      liveComments: [],
+    };
+    setPosts([newLivePost, ...posts]);
+    setActiveLiveStreamPostId(newLivePost.id);
+    setCurrentScreen(Screen.LiveStream);
+    setIsAddModalOpen(false);
+  };
+
   const handleBack = () => {
     if (currentScreen === Screen.Profile || currentScreen === Screen.Messages || currentScreen === Screen.Notifications || currentScreen === Screen.Reels || currentScreen === Screen.Upload || currentScreen === Screen.Discover) {
         setCurrentScreen(Screen.Feed);
@@ -128,6 +159,9 @@ const App: React.FC = () => {
         setActiveProfileId(null);
     } else if (currentScreen === Screen.EditProfile || currentScreen === Screen.Settings) {
         setCurrentScreen(Screen.Profile);
+    } else if (currentScreen === Screen.LiveStream || currentScreen === Screen.GoLive) {
+        setCurrentScreen(Screen.Feed);
+        setActiveLiveStreamPostId(null);
     } else {
         setCurrentScreen(Screen.Feed);
     }
@@ -146,7 +180,7 @@ const App: React.FC = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case Screen.Feed:
-        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} />;
+        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} onLiveStreamClick={handleLiveStreamClick} />;
       case Screen.Profile:
         return <ProfileScreen userId={activeProfileId || CURRENT_USER_ID} posts={posts} onBack={handleBack} onEditProfileClick={handleEditProfileClick} onSettingsClick={handleSettingsClick} bookmarkedPostIds={bookmarkedPostIds} />;
       case Screen.Messages:
@@ -165,12 +199,22 @@ const App: React.FC = () => {
         return <UploadScreen onBack={handleBack} onShare={handleSharePost} />;
       case Screen.Discover:
         return <DiscoverScreen posts={posts} />;
+      case Screen.GoLive:
+        return <GoLiveScreen onBack={handleBack} onGoLive={handleGoLive} />;
+      case Screen.LiveStream: {
+        const post = posts.find(p => p.id === activeLiveStreamPostId);
+        if (!post) {
+            handleBack();
+            return null;
+        }
+        return <LiveStreamScreen post={post} onBack={handleBack} isHost={post.userId === CURRENT_USER_ID} />;
+      }
       default:
-        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} />;
+        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} onLiveStreamClick={handleLiveStreamClick} />;
     }
   };
   
-  const showNavBar = ![Screen.Reels, Screen.Upload, Screen.Chat, Screen.Login, Screen.SignUp, Screen.Messages, Screen.Notifications, Screen.EditProfile, Screen.Settings].includes(currentScreen);
+  const showNavBar = ![Screen.Reels, Screen.Upload, Screen.Chat, Screen.Login, Screen.SignUp, Screen.Messages, Screen.Notifications, Screen.EditProfile, Screen.Settings, Screen.GoLive, Screen.LiveStream].includes(currentScreen);
 
   return (
     <div className="bg-dumm-dark min-h-screen font-sans max-w-sm mx-auto shadow-2xl shadow-dumm-pink/20">
@@ -178,6 +222,33 @@ const App: React.FC = () => {
         {renderScreen()}
       </div>
       {showNavBar && <BottomNavBar activeScreen={currentScreen} navigate={navigate} onProfileClick={handleMyProfileClick} onAddClick={handleAddClick} />}
+       {isAddModalOpen && (
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-8 z-50" onClick={() => setIsAddModalOpen(false)}>
+            <div className="bg-dumm-gray-200 rounded-lg p-6 text-center shadow-lg w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-dumm-text-light mb-6">Create</h3>
+                <div className="space-y-4">
+                      <button
+                        onClick={() => {
+                            setIsAddModalOpen(false);
+                            navigate(Screen.Upload);
+                        }}
+                        className="w-full bg-dumm-gray-300 text-dumm-text-light font-bold py-3 px-4 rounded-lg hover:bg-dumm-gray-100 transition-colors text-left flex items-center"
+                    >
+                        <AddIcon className="w-6 h-6 mr-3"/> Post
+                    </button>
+                      <button
+                        onClick={() => {
+                            setIsAddModalOpen(false);
+                            navigate(Screen.GoLive);
+                        }}
+                        className="w-full bg-dumm-gray-300 text-dumm-text-light font-bold py-3 px-4 rounded-lg hover:bg-dumm-gray-100 transition-colors text-left flex items-center"
+                    >
+                        <PlayCircleIcon className="w-6 h-6 mr-3"/> Live
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
