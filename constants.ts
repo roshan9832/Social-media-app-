@@ -1,5 +1,5 @@
 
-import { User, Post, Story, Conversation, Message, Notification, Reel } from './types';
+import { User, Post, Story, Conversation, Message, Notification, Reel, UserStories } from './types';
 
 export const USERS: User[] = [
   { id: 'u1', name: 'Jane Doe', username: 'janedoe', avatarUrl: 'https://picsum.photos/id/237/200', posts: 12, followers: 242, following: 187, bio: 'Wanderlust in the pool. Food lover. Thanks for the good day ever, thanks! #specialist #pool #summer #party', hasStory: true },
@@ -26,7 +26,35 @@ export const STORIES: Story[] = [
   { id: 's2', userId: 'u2', imageUrl: 'https://picsum.photos/id/1005/200' },
   { id: 's3', userId: 'u4', imageUrl: 'https://picsum.photos/id/1011/200' },
   { id: 's4', userId: 'u6', imageUrl: 'https://picsum.photos/id/64/200' },
-  { id: 's5', userId: 'u5', imageUrl: 'https://picsum.photos/id/1012/200' },
+];
+
+export const USER_STORIES: UserStories[] = [
+  {
+    userId: 'u1',
+    stories: [
+      { id: 's1-1', type: 'image', url: 'https://picsum.photos/id/237/1080/1920', duration: 5, comments: [] },
+      { id: 's1-2', type: 'image', url: 'https://picsum.photos/id/122/1080/1920', duration: 5, comments: [] },
+    ]
+  },
+  {
+    userId: 'u2',
+    stories: [
+      { id: 's2-1', type: 'image', url: 'https://picsum.photos/id/1005/1080/1920', duration: 5, comments: [] },
+    ]
+  },
+  {
+    userId: 'u4',
+    stories: [
+      { id: 's4-1', type: 'video', url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4', duration: 10, comments: [] },
+      { id: 's4-2', type: 'image', url: 'https://picsum.photos/id/1011/1080/1920', duration: 5, comments: [] },
+    ]
+  },
+  {
+    userId: 'u6',
+    stories: [
+        { id: 's6-1', type: 'image', url: 'https://picsum.photos/id/64/1080/1920', duration: 5, comments: [] },
+    ]
+  }
 ];
 
 export const CONVERSATIONS: Conversation[] = [

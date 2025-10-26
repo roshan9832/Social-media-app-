@@ -44,6 +44,19 @@ export interface Story {
   imageUrl: string;
 }
 
+export interface StoryItem {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  duration: number; // in seconds
+  comments?: Comment[];
+}
+
+export interface UserStories {
+  userId: string;
+  stories: StoryItem[];
+}
+
 export interface Message {
   id: string;
   text: string;

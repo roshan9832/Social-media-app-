@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Screen, User, Post } from './types';
+import { Screen, User, Post, Story, UserStories, StoryItem, Comment } from './types';
 import FeedScreen from './screens/FeedScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import MessagesScreen from './screens/MessagesScreen';
@@ -15,8 +15,9 @@ import UploadScreen from './screens/UploadScreen';
 import DiscoverScreen from './screens/DiscoverScreen';
 import GoLiveScreen from './screens/GoLiveScreen';
 import LiveStreamScreen from './screens/LiveStreamScreen';
+import StoryViewerScreen from './screens/StoryViewerScreen';
 import { HomeIcon, ReelsIcon, AddIcon, DiscoverIcon, PlayCircleIcon } from './components/Icons';
-import { CURRENT_USER_ID, USERS, POSTS as initialPosts } from './constants';
+import { CURRENT_USER_ID, USERS, POSTS as initialPosts, STORIES as initialStories, USER_STORIES as initialUserStories } from './constants';
 
 const BottomNavBar: React.FC<{ activeScreen: Screen, navigate: (screen: Screen) => void, onProfileClick: () => void, onAddClick: () => void }> = ({ activeScreen, navigate, onProfileClick, onAddClick }) => {
     return (
@@ -53,6 +54,11 @@ const App: React.FC = () => {
   const [bookmarkedPostIds, setBookmarkedPostIds] = useState<string[]>(['p2']);
   const [activeLiveStreamPostId, setActiveLiveStreamPostId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  const [stories, setStories] = useState<Story[]>(initialStories);
+  const [userStories, setUserStories] = useState<UserStories[]>(initialUserStories);
+  const [activeStoryUserId, setActiveStoryUserId] = useState<string | null>(null);
+
 
   const navigate = (screen: Screen) => {
     setCurrentScreen(screen);
@@ -79,8 +85,7 @@ const App: React.FC = () => {
   };
 
   const handleMyProfileClick = () => {
-    setActiveProfileId(CURRENT_USER_ID);
-    setCurrentScreen(Screen.Profile);
+    handleProfileClick(CURRENT_USER_ID);
   }
 
   const handleChatClick = (conversationId: string, userId: string) => {
@@ -149,6 +154,84 @@ const App: React.FC = () => {
     setIsAddModalOpen(false);
   };
 
+  const handleStoryClick = (userId: string) => {
+    setActiveStoryUserId(userId);
+  };
+
+  const handleCloseStoryViewer = () => {
+      setActiveStoryUserId(null);
+  };
+
+  const handleStoryAdd = () => {
+    // In a real app, this would open a camera/gallery UI.
+    // Here, we simulate adding a new story.
+    const newStoryItem: StoryItem = {
+      id: `s_new_${Date.now()}`,
+      type: 'image',
+      url: `https://picsum.photos/seed/${Date.now()}/1080/1920`,
+      duration: 5,
+    };
+
+    // Update user stories state
+    setUserStories(prev => {
+      const userStoriesIndex = prev.findIndex(us => us.userId === CURRENT_USER_ID);
+      const newStoriesState = [...prev];
+      if (userStoriesIndex > -1) {
+        const updatedUserStories = { ...newStoriesState[userStoriesIndex] };
+        updatedUserStories.stories = [...updatedUserStories.stories, newStoryItem];
+        newStoriesState[userStoriesIndex] = updatedUserStories;
+      } else {
+        newStoriesState.unshift({
+          userId: CURRENT_USER_ID,
+          stories: [newStoryItem],
+        });
+      }
+      return newStoriesState;
+    });
+
+    // Update story tray state
+    setStories(prev => {
+      if (!prev.some(s => s.userId === CURRENT_USER_ID)) {
+        const currentUser = USERS.find(u => u.id === CURRENT_USER_ID);
+        if (currentUser) {
+          return [{ id: `s_${CURRENT_USER_ID}`, userId: CURRENT_USER_ID, imageUrl: currentUser.avatarUrl }, ...prev];
+        }
+      }
+      return prev;
+    });
+    
+    const user = USERS.find(u => u.id === CURRENT_USER_ID);
+    if (user) user.hasStory = true;
+
+    // Open the story viewer to the new story
+    setActiveStoryUserId(CURRENT_USER_ID);
+  };
+
+  const handleStoryComment = (userId: string, storyId: string, commentText: string) => {
+    setUserStories(prevUserStories => {
+      return prevUserStories.map(userStory => {
+        if (userStory.userId === userId) {
+          const newStories = userStory.stories.map(story => {
+            if (story.id === storyId) {
+              const newComment: Comment = {
+                id: `c-story-${Date.now()}`,
+                userId: CURRENT_USER_ID,
+                text: commentText,
+              };
+              return {
+                ...story,
+                comments: [...(story.comments || []), newComment],
+              };
+            }
+            return story;
+          });
+          return { ...userStory, stories: newStories };
+        }
+        return userStory;
+      });
+    });
+  };
+
   const handleBack = () => {
     if (currentScreen === Screen.Profile || currentScreen === Screen.Messages || currentScreen === Screen.Notifications || currentScreen === Screen.Reels || currentScreen === Screen.Upload || currentScreen === Screen.Discover) {
         setCurrentScreen(Screen.Feed);
@@ -177,10 +260,23 @@ const App: React.FC = () => {
     );
   }
 
+  if (activeStoryUserId) {
+    return (
+        <div className="bg-dumm-dark min-h-screen font-sans max-w-sm mx-auto shadow-2xl shadow-dumm-pink/20">
+            <StoryViewerScreen
+                initialUserId={activeStoryUserId}
+                onClose={handleCloseStoryViewer}
+                userStories={userStories}
+                onComment={handleStoryComment}
+            />
+        </div>
+    )
+  }
+
   const renderScreen = () => {
     switch (currentScreen) {
       case Screen.Feed:
-        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} onLiveStreamClick={handleLiveStreamClick} />;
+        return <FeedScreen posts={posts} stories={stories} onStoryAdd={handleStoryAdd} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} onLiveStreamClick={handleLiveStreamClick} onStoryClick={handleStoryClick} />;
       case Screen.Profile:
         return <ProfileScreen userId={activeProfileId || CURRENT_USER_ID} posts={posts} onBack={handleBack} onEditProfileClick={handleEditProfileClick} onSettingsClick={handleSettingsClick} bookmarkedPostIds={bookmarkedPostIds} />;
       case Screen.Messages:
@@ -210,7 +306,7 @@ const App: React.FC = () => {
         return <LiveStreamScreen post={post} onBack={handleBack} isHost={post.userId === CURRENT_USER_ID} />;
       }
       default:
-        return <FeedScreen posts={posts} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} onLiveStreamClick={handleLiveStreamClick} />;
+        return <FeedScreen posts={posts} stories={stories} onStoryAdd={handleStoryAdd} onProfileClick={handleProfileClick} bookmarkedPostIds={bookmarkedPostIds} onToggleBookmark={handleToggleBookmark} navigate={navigate} onLiveStreamClick={handleLiveStreamClick} onStoryClick={handleStoryClick} />;
     }
   };
   

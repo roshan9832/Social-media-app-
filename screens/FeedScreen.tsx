@@ -1,18 +1,18 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Post, Story as StoryType, User, Comment as CommentType, Screen } from '../types';
-import { USERS, STORIES, CURRENT_USER_ID } from '../constants';
-import { LikeIcon, CommentIcon, ShareIcon, MoreIcon, MessagesIcon, BookmarkIcon, NotificationIcon, PlayIcon, PauseIcon, VolumeOffIcon, VolumeUpIcon, PlayCircleIcon, EyeIcon } from '../components/Icons';
+import { USERS, CURRENT_USER_ID } from '../constants';
+import { LikeIcon, CommentIcon, ShareIcon, MoreIcon, MessagesIcon, BookmarkIcon, NotificationIcon, PlayIcon, PauseIcon, VolumeOffIcon, VolumeUpIcon, PlayCircleIcon, EyeIcon, AddIcon } from '../components/Icons';
 
 type StoryProps = {
   story: StoryType;
   isUserLive: boolean;
+  onStoryClick: (userId: string) => void;
 };
-const Story: React.FC<StoryProps> = ({ story, isUserLive }) => {
+const Story: React.FC<StoryProps> = ({ story, isUserLive, onStoryClick }) => {
   const user = USERS.find(u => u.id === story.userId);
   if (!user) return null;
   return (
-    <div className="flex-shrink-0 text-center w-20">
+    <div className="flex-shrink-0 text-center w-20 cursor-pointer" onClick={() => onStoryClick(story.userId)}>
       <div className={`relative p-0.5 border-2 ${isUserLive ? 'bg-gradient-to-tr from-dumm-pink to-yellow-400 border-transparent' : 'border-dumm-pink'} rounded-full`}>
         <img className="w-16 h-16 rounded-full object-cover border-2 border-dumm-dark" src={user.avatarUrl} alt={user.name} />
          {isUserLive && (
@@ -394,22 +394,28 @@ const PostCard: React.FC<PostCardProps> = ({ post, onProfileClick, isBookmarked,
 
 interface FeedScreenProps {
   posts: Post[];
+  stories: StoryType[];
+  onStoryAdd: () => void;
   onProfileClick: (userId: string) => void;
   bookmarkedPostIds: string[];
   onToggleBookmark: (postId: string) => void;
   navigate: (screen: Screen) => void;
   onLiveStreamClick: (postId: string) => void;
+  onStoryClick: (userId: string) => void;
 }
 
 const POSTS_PER_PAGE = 3;
 
-const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick, bookmarkedPostIds, onToggleBookmark, navigate, onLiveStreamClick }) => {
+const FeedScreen: React.FC<FeedScreenProps> = ({ posts, stories, onStoryAdd, onProfileClick, bookmarkedPostIds, onToggleBookmark, navigate, onLiveStreamClick, onStoryClick }) => {
   const livePostUserIds = posts.filter(p => p.isLive).map(p => p.userId);
   
   const [page, setPage] = useState(1);
   const [visiblePosts, setVisiblePosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const loaderRef = useRef(null);
+
+  const currentUser = USERS.find(u => u.id === CURRENT_USER_ID);
+  const currentUserHasStory = stories.some(s => s.userId === CURRENT_USER_ID);
 
   // Load initial posts
   useEffect(() => {
@@ -479,8 +485,27 @@ const FeedScreen: React.FC<FeedScreenProps> = ({ posts, onProfileClick, bookmark
 
       <div className="px-4 pb-2 border-b border-dumm-gray-300">
         <div className="flex space-x-4 overflow-x-auto pb-2 -mx-4 px-4">
-          {STORIES.map(story => (
-            <Story key={story.id} story={story} isUserLive={livePostUserIds.includes(story.userId)} />
+           {currentUser && (
+            <div className="flex-shrink-0 text-center w-20 cursor-pointer" onClick={currentUserHasStory ? () => onStoryClick(CURRENT_USER_ID) : onStoryAdd}>
+              <div className="relative">
+                <img 
+                  className={`w-16 h-16 rounded-full object-cover border-2 p-0.5 ${currentUserHasStory ? 'border-dumm-pink' : 'border-transparent'}`}
+                  src={currentUser.avatarUrl} 
+                  alt="Your Story" 
+                />
+                {!currentUserHasStory && (
+                  <div className="absolute bottom-0 right-0 bg-dumm-blue text-white rounded-full w-6 h-6 flex items-center justify-center border-2 border-dumm-dark">
+                    <AddIcon className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-dumm-text-light mt-2 truncate">Your Story</p>
+            </div>
+          )}
+          {stories
+            .filter(story => story.userId !== CURRENT_USER_ID)
+            .map(story => (
+              <Story key={story.id} story={story} isUserLive={livePostUserIds.includes(story.userId)} onStoryClick={onStoryClick} />
           ))}
         </div>
       </div>
