@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { BackIcon, TagIcon, MapPinIcon, RecordIcon, StopIcon } from '../components/Icons';
 
@@ -21,6 +20,10 @@ const UploadScreen: React.FC<UploadScreenProps> = ({ onBack, onShare }) => {
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  
+  // State and ref for recording timer
+  const [recordingTime, setRecordingTime] = useState(0);
+  const timerIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -54,6 +57,26 @@ const UploadScreen: React.FC<UploadScreenProps> = ({ onBack, onShare }) => {
       }
     };
   }, [isRecordingMode]);
+
+  useEffect(() => {
+    if (isRecording) {
+        setRecordingTime(0);
+        timerIntervalRef.current = window.setInterval(() => {
+            setRecordingTime(prevTime => prevTime + 1);
+        }, 1000);
+    } else {
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+        }
+    }
+
+    return () => {
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+        }
+    };
+  }, [isRecording]);
 
 
   const handleMediaSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,8 +149,13 @@ const UploadScreen: React.FC<UploadScreenProps> = ({ onBack, onShare }) => {
         };
       };
 
-      mediaRecorder.start();
-      setIsRecording(true);
+      try {
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Failed to start recording:", err);
+        alert("Sorry, could not start the recording. Please check browser permissions and try again.");
+      }
     }
   };
 
@@ -161,6 +189,12 @@ const UploadScreen: React.FC<UploadScreenProps> = ({ onBack, onShare }) => {
     onBack();
   };
   
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+  
   if (isRecordingMode) {
     return (
       <div className="relative h-screen w-full bg-black flex flex-col">
@@ -169,6 +203,12 @@ const UploadScreen: React.FC<UploadScreenProps> = ({ onBack, onShare }) => {
           <button onClick={() => setIsRecordingMode(false)} className="bg-black/30 p-2 rounded-full">
             <BackIcon className="w-6 h-6 text-white" />
           </button>
+          {isRecording && (
+            <div className="flex items-center space-x-2 bg-red-600 text-white px-3 py-1.5 rounded-full font-semibold shadow-lg border-2 border-red-400">
+                <span className="animate-pulse font-bold text-sm">REC</span>
+                <span className="font-mono text-sm tracking-wider">{formatTime(recordingTime)}</span>
+            </div>
+          )}
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-center items-center z-10">
           <button onClick={isRecording ? handleStopRecording : handleStartRecording} className="w-20 h-20 rounded-full flex items-center justify-center bg-white/30 backdrop-blur-sm transition-transform active:scale-90">
